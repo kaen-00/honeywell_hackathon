@@ -3,7 +3,8 @@ import requests
 import os
 import json
 
-# Define abbreviation and code dictionaries
+
+
 abbreviations = {
     "ABV": "above",
     "CNL": "cancelled",
@@ -52,17 +53,12 @@ weather_codes = {
 }
 
 def fetch_sigmet(airport_id, altitude=None):
-    """
-    Fetch domestic SIGMETs for a given airport ID and optional altitude.
-    Altitude is in feet (e.g., 12000), will be translated to flight level (FL120).
-    """
+
     base_url = "https://aviationweather.gov/api/data/airsigmet"
     params = {
         #"ids": airport_id,
         "format": "json"
     }
-
-    # If altitude is provided, convert to flight level (1 FL = 100 ft)
     if altitude:
         flight_level = int(altitude / 100)
         params["level"] = flight_level
@@ -133,9 +129,9 @@ def parse_sigmet(text):
 
     return "\n".join(output_lines)
 
-# Example usage
-def sigmet_json_generator(airports_json):
-    with open(AP) as airports:
+
+def sigmet_json_generator(ap):
+    with open(ap) as airports:
         ap = json.load(airports)
 
     sigmet=[]
@@ -143,6 +139,7 @@ def sigmet_json_generator(airports_json):
         print(a['airport_id'])
         x=fetch_sigmet(a['airport_id'])
         coords=x[0]['coords']
+        severity=x[0]['severity']
         print(coords)
         sigmet_english=parse_sigmet(x[0]['rawAirSigmet'])
         print(sigmet_english)
@@ -151,6 +148,7 @@ def sigmet_json_generator(airports_json):
         sigmet.append({
             "sigmet_eng": sigmet_english,
             "coords": coords,
+            "severity":severity
             })
 
         output_data = {"sigmet": sigmet}

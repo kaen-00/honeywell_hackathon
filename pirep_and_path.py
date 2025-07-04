@@ -4,6 +4,7 @@ import os
 from geopy.distance import geodesic
 import numpy as np
 import re
+import time
 
 
 weather_code_descriptions = {
@@ -105,7 +106,7 @@ def interpolate_points(start, end, interval_nm=50):
     lons = np.linspace(start[1], end[1], steps)
     return list(zip(lats, lons))
 
-def find_weather_warnings_between_airports(airport1_json, airport2_json, threshold_nm=20, output_filename="pireps.json"):
+def find_weather_warnings_between_airports(airport1_json, airport2_json, threshold_nm=50, output_filename="pireps.json"):
 
     try:
         lat1 = airport1_json["weather"][0]["metar"][0]["lat"]
@@ -117,7 +118,10 @@ def find_weather_warnings_between_airports(airport1_json, airport2_json, thresho
         return []
 
     route_points = interpolate_points((lat1, lon1), (lat2, lon2))
-    fetch_weather_for_route_points(route_points, output_filename="route_weather.json")
+    x=fetch_weather_for_route_points(route_points, output_filename="route_weather.json")
+    while(x==False):
+        time.sleep(1)
+    
     # Combine PIREPs from both airports
     pireps = []
     if "pirep" in airport1_json["weather"][0]:
@@ -161,7 +165,7 @@ def find_weather_warnings_between_airports(airport1_json, airport2_json, thresho
         json.dump(output_data, f, indent=2)
 
     print(f"✅ Saved {len(warnings)} unique weather warning points to {output_filename}")
-    return warnings
+    return True
 
 def fetch_weather_for_route_points(route_points, output_filename="route_weather.json"):
     import requests
@@ -192,13 +196,12 @@ def fetch_weather_for_route_points(route_points, output_filename="route_weather.
                 "point_index": i,
                 "lat": lat,
                 "lon": lon,
-                "weather": {
                     "code": code,
                     "description": description,
                     "temperature": weather.get("temperature"),
                     "windspeed": weather.get("windspeed"),
                     "is_severe": is_severe
-                }
+                
             })
             time.sleep(0.5)  # avoid hammering the API
         except Exception as e:
@@ -215,8 +218,9 @@ def fetch_weather_for_route_points(route_points, output_filename="route_weather.
         json.dump(output_data, f, indent=2)
 
     print(f"✅ Saved weather data for {len(route_points)} points to {output_filename}")
-    return weather_data
-
+    # if len(route_points)==0:
+    #     return
+    return True
 
 
 def fetch_metar(airport_id):
@@ -260,6 +264,7 @@ def generate_quick(file_path):
         altitude=waypoint.get("altitude")
         output_airport_data={}
         weather_data = []
+        pirep_dat=[]
         print(f"📍 Airport: {airport_id}]")
     
         metar = fetch_metar(airport_id)
@@ -279,6 +284,7 @@ def generate_quick(file_path):
             # "sigmet": sigmet
             # Add PIREP and SIGMET data here
         })
+        # pirep_data.append({"pirep": pirep})
         print("weather collected")
         
         output_airport_data={"weather": weather_data}
@@ -289,19 +295,29 @@ def generate_quick(file_path):
         
 
 
-    print("lenght of list",len(final_json_list))
+    #print("lenght of list",len(final_json_list))
     # print(final_json_list[0][0][''],final_json_list[-1])
     # with open("LA.json", "w") as f:
     #     json.dump(final_json_list[0], f, indent=2)
 
     # with open("TXs.json", "w") as f:
     #     json.dump(final_json_list[-1], f, indent=2)
+    # fetch_pirep("KLAX")
 
 
-    find_weather_warnings_between_airports(final_json_list[0],final_json_list[-1])
 
-    # # with open("C:\\Users\\hperu\\weather_app\\map\\airports.json", "w") as f:
-    #     json.dump(output_data, f, indent=2)
+    x=find_weather_warnings_between_airports(final_json_list[0],final_json_list[-1])
+    return x
+
+
+
+# pirep_data=[]
+# pirep=fetch_pirep("KLAX")
+# pirep_data.append({"pirep": pirep})
+
+
+# with open("C:\\Users\\hperu\\weather_app\\map\\pirep.json", "w") as f:
+#     json.dump(pirep_data, f, indent=2)
 
 
 # get_weather("airports.json")
